@@ -1,0 +1,5 @@
+# lo que no sera tenido en cuenta para el respositorio:
+
+pgadmin/
+postgres/
+

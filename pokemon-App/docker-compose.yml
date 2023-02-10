@@ -1,0 +1,56 @@
+version: '4'
+
+services:
+# nombre del servicio:
+  db:
+    container_name: ${MONGO_DB_NAME}
+    image: mongo:6.0
+    volumes:
+    # donde se guarda la data en mongodb
+      - poke-vol:/data/db
+    # puerto propio: puerto de mongo por defecto OJO: no es necesario exponer nuestra db si quien la va a utilizar es nuestro otro contenedor, no seria necesario ademas por seguridad
+    # ports:
+    #   - 27017:27017
+      # cuando se cae se vuelve a levantar
+    restart: always
+    environment:
+      # utilizando las variables de entorno
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+  # si queremos ejecturar comandos de la consola:
+  # primer comando para la authenticacion con la bd. forzando que se haga autenticacion para proteger la db
+    command: ['--auth']
+  
+  # creando otro servicio:
+  mongo-express:
+    depends_on:
+    # depende de la base de datos, el servicio anteriormente creado
+      - db
+    image: mongo-express:1.0.0-alpha.4
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USERNAME} 
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD}
+      # RECORDAR QUE CUANDO SE CREA EL COMPOSE, CREA LA RED, POR LO CUAL EL PUERTO SERIA EL NOMBRE DEL CONTAINER QUE ESTA DENTRO: 'ESTE SERIA EL OTRO CONTAINER'
+      ME_CONFIG_MONGODB_SERVER  : ${MONGO_DB_NAME}
+    ports:
+      - 8080:8081
+    # cuando se cae se vuelve a levantar
+    restart: always
+    
+  # otro servicio app hecha en nest
+  poke-app:
+    depends_on:
+      - db
+      - mongo-express
+    image: klerith/pokemon-nest-app:1.0.0
+    ports:
+      - 3000:3000
+    environment:
+      MONGODB: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_DB_NAME}:${MONGODB_PORT}
+      DB_NAME: poke_db
+
+    restart: always
+
+volumes:
+  poke-vol:
+    external: false

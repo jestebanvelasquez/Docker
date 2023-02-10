@@ -1,0 +1,188 @@
+ network => volume => images => container :
+  
+container: donde podemos utilizar las diferentes imagenes necesarias para el proyecto.
+images: se utiliza para generar las imagenes de las dependencias a utilizar por los container
+volume:  se utiliza para hacer persisitir la informacion, guardandola en carpetas especificas en el ordenador.
+network: se utiliza para unir a dos container y que puedan comunicarse entre si.
+
+
+
+
+ *** Creando un nuevo contenedor en el puerto 3306 con mariadb y creando su volumen respectivo 👍
+ 
+primero creamos el volume : docker volumer create world-db 
+
+
+docker container run \
+--name world-db \
+-e MARIADB_USER=example-user \
+-e MARIADB_PASSWORD=user-pàssword \
+-e MARIADB_ROOT_PASSWORD=root-secret-password \
+-e MARIADB_DATABASE=world-db \
+-dp 3306:3306 \
+--volume world-db:/var/lib/mysql \
+mariadb:jammy
+
+
+de esta manera no se elimina la data de la base de datos, se puede eliminar el contenedor pero la data persistirá
+
+conectadon con el php admin : phpmyadmin:5.2.0-apache
+
+
+docker container run \
+--name myadmin \
+-d \
+-e PMA_ARBITRARY=1 \
+-p 8080:80 \
+phpmyadmin:5.2.0-apache
+
+
+*** Para poder conectar estos dos container y que se puedan comunicar entre si debemos crear unas redes : 
+
+network create world-app  
+docker network ls
+docker network inspect  world-app
+
+
+conectar dos container a la network world-app
+
+
+// primera conexion de la network al container con id:
+ docker network connect world-app d8f
+
+// segunda conexion de la network al container con id:
+ docker network connect world-app e6f
+
+
+
+// generando un nuevo container con un volume y conectandolo a la red ya creada 'world-app';
+
+
+
+docker container run \
+--name world-db \
+-e MARIADB_USER=example-user \
+-e MARIADB_PASSWORD=user-pàssword \
+-e MARIADB_ROOT_PASSWORD=root-secret-password \
+-e MARIADB_DATABASE=world-db \
+-dp 3306:3306 \
+--volume world-db:/var/lib/mysql \
+--network world-app \
+mariadb:jammy
+
+
+docker container run \
+--name myadmin \
+-d \
+-e PMA_ARBITRARY=1 \
+-p 8080:80 \
+--network world-app \
+phpmyadmin:5.2.0-apache
+
+
+***Bind Volumes: 
+
+conectar dos volumes y que se actualice la info de acuerdo al otro 
+
+
+docker container run \ ** montar container
+--name nest-app \ nombre del container
+-w /app \ directorio 
+-dp 80:3000 \ puertos conectados
+-v "$(pwd)":/app \ donde se enlazara con el volumen
+node:16-alpine3.16 \ version de node a instalar
+sh -c "yarn install && yarn start:dev" codigo de consola, cuando termine instalara dependecias y ejecutara la app en modo dev 
+
+/////////////////////______///////////////////
+
+docker container run \
+--name nest-app \
+-w /app \
+-dp 80:3000 \
+-v "$(pwd)":/app \
+node:16-alpine3.16 \
+sh -c "yarn install && yarn start:dev"
+
+
+
+
+// Terminal Interactiva:
+
+escribir comandos de la powershell dentro de un container: 
+
+ docker exec -it idContainer /bin/sh == ejecuta la terminal interactiva  dentro del container 'id' busca el siguiente directorio
+
+  docker exec -it 6a0 /bin/sh 
+
+
+  ya estando dentro del container y parados en el directorio especificado, para abrir un archivo se navega hasta el con cd 'nombre de la carpeta' y se utiliza: 
+    
+ cat hello-world.resolver.ts : abre el archivo en consola en modo lectura
+ 
+ vi hello-world.resolver.ts para poder editarlo
+
+ marcando la tecla 'i' puedes empezara editarlo,
+
+ para guardar y salir es escape + : + qw!  enter  // esto te sacara y guardara los cambios
+
+
+la palabra exit te sacara de la terminal interactiva.
+
+
+********************************//*******************************
+creando un contenedor con volumen y base de datos en postgres de manera manual 
+
+- primero creamos la base de datos: 
+    docker volume create postgres-db
+
+- creamos el contenedor y lo asociamos a la base de datos ya creada:
+
+    docker container run \
+    -d \
+    --name postgres-db \
+    -e POSTGRES_PASSWORD=123456 \
+    -v postgres-db:/var/lib/postgresql\data \
+    postgres:15.1
+
+- con esto hemos creado un contenedor que se conecta con el volumen postgres-db;
+- creamos la imagen y container de pg admin para luego unirlos con la network:
+
+    docker container run \
+    --name pgAdmin \
+    -e PGADMIN_DEFAULT_PASSWORD=123456 \
+    -e PGADMIN_DEFAULT_EMAIL=superman@google.com \
+    -dp 8080:80 \
+    dpage/pgadmin4:6.17 
+
+
+- para unir la network con los container: 
+
+    docker network connect postgres-db id del conainer 1
+    docker network connect postgres-db id del conainer 2
+
+- listo, ya estan unidos los container en la red postgres-net, ahora puedes ingresar al pg admin en el localhot 8080 e ingresar con la data suministrada antes: correo, contraseña, luego crear server
+
+
+
+//////////////////************* Docker Compose File *************////////////////////////
+
+docker compose --help : listar comandos
+
+docker compose up: subir las instrucciones dadas en el archivo 
+
+docker coimpose dowm: bajar y remover lo creado dado en el archivo base: se debe estar parado sobre la carpeta en la terminal 
+
+docker compose up -d para que no se quede esperando en la consolay cpodamos cancelarcon control + c 
+
+docker compose logs  para ver la info de los contenedores
+
+docker compose logs -f para seguir los cambios en vivo, se puede salir con control + c  sin terminar el programa
+
+
+
+// docker compose bind volumes: 
+
+
+************************************************************ CREACION DE IMAGENES **********************************************************************
+
+

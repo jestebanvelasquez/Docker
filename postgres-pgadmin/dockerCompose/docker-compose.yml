@@ -1,0 +1,39 @@
+# version de docker: tener couidado con la identacion de la pagina, ya que si no es correcta puede presentar error
+version: '4'
+
+# los servicios que tendra nuestra union de container: la base de datos:
+services:
+# una base de datos para almacenar informacion 
+  db:
+  # para conectarse a pgadmin, el nombre del host sera el dado a continuacion :
+    container_name: postgres_database
+    image: postgres:15.1
+    volumes:
+      # guardadno en l caprta de la pc: 
+      # - postgres-db:/var/lib/postgresql/data
+
+      # para elegir que se guarde en el mismo directorio de la carpeta padre creando la carpeta indicada :
+      - ./postgres/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=123456
+
+# pg admin para administrar la base de datos 
+  pgAdmin:
+    depends_on:
+      - db
+    image: dpage/pgadmin4:6.17
+    ports:
+      - "8080:80"
+    # para elegir que se guarde en el mismo directorio de la carpeta padre creando la carpeta indicada :
+    volumes:
+      - ./pgadmin:/var/lib/pgadmin
+    environment:
+      - PGADMIN_DEFAULT_PASSWORD=123456 
+      - PGADMIN_DEFAULT_EMAIL=superman@google.com 
+
+# los volumenes a utilizar: si se va a giuardar directamente en el equipo, si es el el directorio,  linea 16, comentar estas lineas de volumes
+# volumes:
+# # si ya se encuentra el volumen generado utilizarlo y no crear otro nuevo, esto para seguir trabajando con la data existente en caso de ser necesario
+#   postgres-db:
+#   # de esta manera le decimos que utilice el volumen externo:
+#     external: true

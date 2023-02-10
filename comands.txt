@@ -1,0 +1,382 @@
+ network => volume => images => container :
+  
+container: donde podemos utilizar las diferentes imagenes necesarias para el proyecto.
+images: se utiliza para generar las imagenes de las dependencias a utilizar por los container
+volume:  se utiliza para hacer persisitir la informacion, guardandola en carpetas especificas en el ordenador.
+network: se utiliza para unir a dos container y que puedan comunicarse entre si.
+
+
+
+
+ *** Creando un nuevo contenedor en el puerto 3306 con mariadb y creando su volumen respectivo 👍
+ 
+primero creamos el volume : docker volumer create world-db 
+
+
+docker container run \
+--name world-db \
+-e MARIADB_USER=example-user \
+-e MARIADB_PASSWORD=user-pàssword \
+-e MARIADB_ROOT_PASSWORD=root-secret-password \
+-e MARIADB_DATABASE=world-db \
+-dp 3306:3306 \
+--volume world-db:/var/lib/mysql \
+mariadb:jammy
+
+
+de esta manera no se elimina la data de la base de datos, se puede eliminar el contenedor pero la data persistirá
+
+conectadon con el php admin : phpmyadmin:5.2.0-apache
+
+
+docker container run \
+--name myadmin \
+-d \
+-e PMA_ARBITRARY=1 \
+-p 8080:80 \
+phpmyadmin:5.2.0-apache
+
+
+*** Para poder conectar estos dos container y que se puedan comunicar entre si debemos crear unas redes : 
+
+network create world-app  
+docker network ls
+docker network inspect  world-app
+
+
+conectar dos container a la network world-app
+
+
+// primera conexion de la network al container con id:
+ docker network connect world-app d8f
+
+// segunda conexion de la network al container con id:
+ docker network connect world-app e6f
+
+
+
+// generando un nuevo container con un volume y conectandolo a la red ya creada 'world-app';
+
+
+
+docker container run \
+--name world-db \
+-e MARIADB_USER=example-user \
+-e MARIADB_PASSWORD=user-pàssword \
+-e MARIADB_ROOT_PASSWORD=root-secret-password \
+-e MARIADB_DATABASE=world-db \
+-dp 3306:3306 \
+--volume world-db:/var/lib/mysql \
+--network world-app \
+mariadb:jammy
+
+
+docker container run \
+--name myadmin \
+-d \
+-e PMA_ARBITRARY=1 \
+-p 8080:80 \
+--network world-app \
+phpmyadmin:5.2.0-apache
+
+
+***Bind Volumes: 
+
+conectar dos volumes y que se actualice la info de acuerdo al otro 
+
+
+docker container run \ ** montar container
+--name nest-app \ nombre del container
+-w /app \ directorio 
+-dp 80:3000 \ puertos conectados
+-v "$(pwd)":/app \ donde se enlazara con el volumen
+node:16-alpine3.16 \ version de node a instalar
+sh -c "yarn install && yarn start:dev" codigo de consola, cuando termine instalara dependecias y ejecutara la app en modo dev 
+
+/////////////////////______///////////////////
+
+docker container run \
+--name nest-app \
+-w /app \
+-dp 80:3000 \
+-v "$(pwd)":/app \
+node:16-alpine3.16 \
+sh -c "yarn install && yarn start:dev"
+
+
+
+
+// Terminal Interactiva:
+
+escribir comandos de la powershell dentro de un container: 
+
+ docker exec -it idContainer /bin/sh == ejecuta la terminal interactiva  dentro del container 'id' busca el siguiente directorio
+
+  docker exec -it 6a0 /bin/sh 
+
+
+  ya estando dentro del container y parados en el directorio especificado, para abrir un archivo se navega hasta el con cd 'nombre de la carpeta' y se utiliza: 
+    
+ cat hello-world.resolver.ts : abre el archivo en consola en modo lectura
+ 
+ vi hello-world.resolver.ts para poder editarlo
+
+ marcando la tecla 'i' puedes empezara editarlo,
+
+ para guardar y salir es escape + : + qw!  enter  // esto te sacara y guardara los cambios
+
+
+la palabra exit te sacara de la terminal interactiva.
+
+
+********************************//*******************************
+creando un contenedor con volumen y base de datos en postgres de manera manual 
+
+- primero creamos la base de datos: 
+    docker volume create postgres-db
+
+- creamos el contenedor y lo asociamos a la base de datos ya creada:
+
+    docker container run \
+    -d \
+    --name postgres-db \
+    -e POSTGRES_PASSWORD=123456 \
+    -v postgres-db:/var/lib/postgresql\data \
+    postgres:15.1
+
+- con esto hemos creado un contenedor que se conecta con el volumen postgres-db;
+- creamos la imagen y container de pg admin para luego unirlos con la network:
+
+    docker container run \
+    --name pgAdmin \
+    -e PGADMIN_DEFAULT_PASSWORD=123456 \
+    -e PGADMIN_DEFAULT_EMAIL=superman@google.com \
+    -dp 8080:80 \
+    dpage/pgadmin4:6.17 
+
+
+- para unir la network con los container: 
+
+    docker network connect postgres-db id del conainer 1
+    docker network connect postgres-db id del conainer 2
+
+- listo, ya estan unidos los container en la red postgres-net, ahora puedes ingresar al pg admin en el localhot 8080 e ingresar con la data suministrada antes: correo, contraseña, luego crear server
+
+
+
+//////////////////************* Docker Compose File con MongoDb *************////////////////////////
+
+docker compose --help : listar comandos
+
+docker compose up: subir las instrucciones dadas en el archivo 
+
+docker coimpose dowm: bajar y remover lo creado dado en el archivo base: se debe estar parado sobre la carpeta en la terminal 
+
+docker compose up -d para que no se quede esperando en la consolay cpodamos cancelarcon control + c 
+
+docker compose logs  para ver la info de los contenedores
+
+docker compose logs -f para seguir los cambios en vivo, se puede salir con control + c  sin terminar el programa
+
+//utilizando table plus:
+para conectarse a la db escribir la url: 
+
+mongodb://esteban:123456@localhost:27017
+
+
+// docker compose mongo express:  servidor para interactuar la base de datos
+ buscar la imagen oficial de mongo express
+
+
+
+
+************************************************************ CREACION DE IMAGENES **********************************************************************
+
+
+Nota: npm i node-cron : se utiliza para la automatizacion de procesos. Procesos de sincronizacion
+
+Para creaun una imagen, se crea un archivo llamado Dockerfile  donde se almacenaran las indicaciones, paso a paso para la creacion de nuestra imagen, 'ver archivo',
+luego que este construida, abriendo una terminal externa en la ubicasion de la work directory se ejecutan los siguientes comandos:
+
+    docker build --tag cron-ticker . : forma larga, el punto indica la ubicacion del archivo, si estuviera dentro de otra carpeta seria : ./otracarpeta...
+
+    docker container run cron-ticker : para correr nuestra imagen creada en un contenedor
+
+
+
+
+********************************************************* RECONSTRUIR UNA IMAGEN  ********************************************************************** 
+
+cuando viene una actualizacion o cambios en el codigo o correcciones. 
+
+importante: Ordenar las instrucciones de menor a mayor cambios posibes, es decir al inicio iran las instrucciones que cambien muy poco y al final de archivo iran las instrucciones que realizaran cambios constrantemente
+
+- para crear las versiones segun sean los cambios utilizamos el comando 👍
+    docker build --tag cron-ticker:1.0.0 .
+    docker build --tag cron-ticker:1.0.1 .  etc...
+
+- renombrando versiones: creara otro apuntador a la imagen : sin afectar a la inicial 
+    docker image tag cron-ticker:1.0.0 cron-ticker:development
+
+Nota: podemos crear versiones segun los cambios y renombrarlas ejemplo:
+
+    1- se realiza un cambio en el archivo app
+    2- se crea una nueva imagen : docker build --tag cron-ticker . que sera nuestro nuevo lates 'ultima version' 
+    3- podremos renombrarla: docker image tag cron-ticker cron-ticker:bufalo
+Con esto ya podemos listar las imagenes y correr la version que necesitemos y segun sus cambios.
+
+
+********************************************************* SUBIENDO UNA IMAGEN  AL REPOSITORIO DE DOCKER: REGISTROS **************************************************************** 
+
+
+debemor ir a la pagina de docker iniciar sesion y crear el repositorio, esto nos entregara un comando con el cual podremos hacer el push desde nuestra  terminal.
+    - debemos authenticarnos primero:
+         docker login 
+         docker logout 
+    - generamos la imagen a subir, la cual si no se le expecifica subira el lates :
+        _: hara una copia de la imagen lates 
+            docker image tag cron-ticker jestebandeveloper/cron-ticker  / Nota:  debe ser con este nombre para que case con el del repositorio!
+
+    - despues de logearnos, ejecutamos el comando : 
+        docker push jestebandeveloper/cron-ticker:tagname ó docker push jestebandeveloper/cron-ticker:latest
+
+para subir las demas versiones : 
+    - generamos la imagen con nuestra cuenta: 
+        docker image tag jestebandeveloper/cron-ticker:latest jestebandeveloper/cron-ticker:bufalo 
+            'esto generara la referencia a nuestra version bufalo y la dejara lista para pushear'
+    - pusheamos la imagen :
+        docker push jestebandeveloper/cron-ticker:bufalo 
+
+   /////////////// ********* tip: para borrar todas las imagenes : docker image prune -a  ********* ////////////////////
+
+    - para abrir desde nuestros  repositorios de docker : 
+
+        docker container run jestebandeveloper/cron-ticker:bufalo
+    
+    ////////////// PARA QUE DOS IMAGENES APUNTEN A UNA MISMA ID: image
+
+    - docker image tag jestebandeveloper/cron-ticker:pantera \
+    jestebandeveloper/cron-ticker =>> esto apunta al latest, pero podemos ponerle el nombre que se quiera 
+
+
+
+
+
+
+********************************************************* AÑADIR PRUEBAS AUTOMATICAS A NUESTRA IMAGEN "TESTING" **************************************************************** 
+
+ - instalando Jest : npm i jest --save -D 
+
+ - realizamos el test : carpetas  test, agregamos el script para correr el test en package.json, lo probamos.
+
+ - agregamos el proceso de testing al arbol de procesos de docker : Dockerfile, se coloca antes de correr la app, esto nos asegurara de que funciona o no.
+
+ - ejecutamos el comando cron-ticker % docker build -t jestebandeveloper/cron-ticker:mapache . para crear la nueva imagen con los cambios y correr el programa.
+
+
+********************************************************* EXAMINANDO NUESTRA IMAGEN "CARPETA APP" **************************************************************** 
+
+
+Para verificar el contenido de la carpeta app, que contiene lso archivos necesarios ejecutamos el sigueinte comando: 
+    
+    - corremos nuestro container : docker container run -d jestebandeveloper/cron-ticker:mapache
+    - entramos en la carpeta bin  => app : docker exec -it 7ba  /bin/sh  : ejecutar la terminal interactiva del contendedor id 
+    - con ls listamos el contenido de la carpeta app : podemos ingresar aun archivo con :  cat 'nombre.del.archivo'
+
+    ********* DOCKER IGNORE ************
+
+El archivo docker ignore, especifica todo lo que hay que ignorar en un proceso  de construccion (build). 
+
+    -NOTA!: para correr el contenedor mas facil : docker container run -d id.de.la.imagen
+
+    esto lo ignorara pero seguira aumentando en peso nuestra app: 
+
+********************************************************* REMOVIENDO ARCHIVOS Y CARPETAS DE NUESTRA APP **************************************************************** 
+
+
+en el archivo Dockerfile agregamos los siguientes procesos: esto solo es una alternativa nada mas, mas adelnate se vera la creacion de multiples procesos de construccion.
+
+*** eliminar archivos y directorios no necesarios en PROD:
+    RUN rm -rf tests && rm -rf node_modules => elimina de manera recursiva 'rf' ....
+
+*** instalar solo dependencias necesarias para PROD
+    RUN npm install --prod
+
+
+
+********************************************************* SELECCIONAR UNA ARQUITECTURA Y PROCESARLO SEGUN SEA **************************************************************** 
+    DOCUMENTACION : https://docs.docker.com/build/building/multi-platform/
+
+    Proceso para crear una imagen soportada para multiples plataformas:
+    
+        #  FROM --platform=arm64 node:19.2.0-alpine3.17 => tambien podemos especificar a que arquitectura vamos, en este caso : --platform=arm64
+
+    lo sgte  muestra el tipo de arquitecturas con las que podemos trabajar: 
+    para listar los buils que tenemos :  builds de arquitecturas soportadas
+
+    - docker buildx ls 
+        "
+            /mips64le, linux/mips64, linux/arm/v7, linux/arm/v6
+            default *       docker                                       
+        arquitecturas =>    default       default                     running 20.10.22 linux/amd64, linux/arm64, linux/riscv64, linux/ppc64le, linux/s390x, linux/386, linux/arm/v7, linux/arm/v6
+            desktop-linux   docker                    
+        
+        "  
+
+    ****** NOTA ==>  lo anterior es lo que arroja la consola, mostrando que  arquitecturas estan por defecto  instauradas
+              para poder manejar diefrentes utilizamos el docker buildx create
+
+
+    con el sgte comando se crea un container con los buildx :  nombre = mybuilder
+
+            - docker buildx create --name mybuilder --driver docker-container --bootstrap
+        mybuilder
+
+
+    esto, levanta un nuevo container: ver con docker desktop ó docker container ls donde podremos almacenas las imagenes y sus diferentes arquitecturas
+
+    para usar el nuevo mybuilder y cambiar el por default: 
+
+        - docker buildx use mybuilder
+
+    para inspeccionarlo : 
+
+        - docker buildx inspect
+
+    apareceran los detalles, mostrando las plataformas en las que podra trabajar
+
+
+    en el Dockerfile : 
+
+        - FROM --platform=$BUILDPLATFORM node:19.2.0-alpine3.17 : de esta manera decimos que va a utilizar la plataforma que contenga nuestro buildx anteriormente creado
+
+    ************** PARA SELECCIONAR LAS PLATAFORMAS CON LAS QUE QUEREMOS QUE TRABAJE DICHA IMAGEN ***************************
+
+    utilizamos el siguiente comando: 
+
+        - docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t  jestebandeveloper/cron-ticker:latest --push .
+
+            ESTO UTILIZA EL BUILDX QUE TENGAMOS SELECCIONADO, Y DEBE SOPORTAR DICHAS PLATAFORMAS DADAS PARA QUE FUNCIONE, LUEGO DE ESO LO PUSHEARA AL REPO
+
+
+        - docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t  jestebandeveloper/cron-ticker:"nombreimagen" --push .  
+
+            tambien podemos crear una nueva imagen con las arquitecturas que deseamos !!!!!
+
+       **************** Todo este proceso nos ayuda a que docker elija la arquitectura  idonea para correr la imagen en nuestro equipo. !!!!!
+
+
+Tambien podemos hacerlo, cambiando en el Dockerfile : 
+
+    - FROM  node:19.2.0-alpine3.17
+
+y podemos utilizar 
+    
+    - docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t  jestebandeveloper/cron-ticker:"nombreimagen" --push .
+
+creando una nueva imagen con las plataformas que queremos para ella. 
+
+    *************************** de esta manera hemos hecho que nuestra imagen soporte varias versiones de arquitectura!! ver en el repositorio  de docker *************************** 
+
+
+
