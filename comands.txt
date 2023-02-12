@@ -303,8 +303,8 @@ en el archivo Dockerfile agregamos los siguientes procesos: esto solo es una alt
     RUN npm install --prod
 
 
-
 ********************************************************* SELECCIONAR UNA ARQUITECTURA Y PROCESARLO SEGUN SEA **************************************************************** 
+
     DOCUMENTACION : https://docs.docker.com/build/building/multi-platform/
 
     Proceso para crear una imagen soportada para multiples plataformas:
@@ -378,5 +378,19 @@ creando una nueva imagen con las plataformas que queremos para ella.
 
     *************************** de esta manera hemos hecho que nuestra imagen soporte varias versiones de arquitectura!! ver en el repositorio  de docker *************************** 
 
+Para eliminar un buildx debemos :   
+
+        - si se esta en el que queremos eliminar, primero debemos pasarnos a otro para poder eliminar dicho builder  
+
+            docker buildx ls 
+            docker docker buildx use 'nombre del buildx que queremos usar'
+
+
+        - con el comando : docker buildx rm 'nombre del builder a eliminar'
+
+*********************************************************   MULTI-STAGE BUILD   ******************************************************************************************************************************** 
+
+Se utiliza para fragmentar nuestro  Dockerfile, para segmentar de una manera mas eficaz la construccion de nuestra imagen a la hora de que se realicen cambios en los diferentes archivos.
+dividiendolo en pequeñas tareas, ejemplo, una que maneje solo las dependencias de node, otro que solo maneje el testing y el build.
 
 
